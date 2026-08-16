@@ -5,7 +5,7 @@ import { usageApi } from '@/services/api/usage';
 import { downloadBlob } from '@/utils/download';
 import { loadModelPrices, saveModelPrices, type ModelPrice } from '@/utils/usage';
 
-const LIVE_USAGE_CHECK_INTERVAL_MS = 3_000;
+const LIVE_USAGE_CHECK_INTERVAL_MS = 30_000;
 
 export interface UsagePayload {
   total_requests?: number;

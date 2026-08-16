@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Chart as ChartJS,
@@ -107,6 +107,11 @@ export function UsagePage() {
     importing,
   } = useUsageData();
 
+  // Keep polling responsive: expensive usage-card calculations follow the
+  // latest snapshot at a lower priority and can be interrupted by input.
+  const deferredUsage = useDeferredValue(usage);
+  const deferredNowMs = useDeferredValue(lastRefreshedAt?.getTime() ?? 0);
+
   useHeaderRefresh(loadUsage);
 
   const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
@@ -169,8 +174,8 @@ export function UsagePage() {
   );
 
   const filteredUsage = useMemo(
-    () => (usage ? filterUsageByTimeRange(usage, timeRange) : null),
-    [usage, timeRange]
+    () => (deferredUsage ? filterUsageByTimeRange(deferredUsage, timeRange) : null),
+    [deferredUsage, timeRange]
   );
   useEffect(() => {
     try {
@@ -183,7 +188,7 @@ export function UsagePage() {
     }
   }, [timeRange]);
 
-  const nowMs = lastRefreshedAt?.getTime() ?? 0;
+  const nowMs = deferredNowMs;
 
   // Sparklines hook
   const {
@@ -196,7 +201,7 @@ export function UsagePage() {
   } = useSparklines({ usage: filteredUsage, loading, nowMs });
 
   // Derived data
-  const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
+  const modelNames = useMemo(() => getModelNamesFromUsage(deferredUsage), [deferredUsage]);
   const apiStats = useMemo(
     () => getApiStats(filteredUsage, modelPrices),
     [filteredUsage, modelPrices]

@@ -47,6 +47,32 @@ const revisionsMatch = (left: UsageRevision | null, right: UsageRevision | null)
   left.latest_id === right.latest_id &&
   left.total_rows === right.total_rows;
 
+/**
+ * Background usage refreshes can contain thousands of request details. Let the
+ * browser handle that transformation when it has an idle slice so polling does
+ * not compete with pointer/keyboard input. The timeout keeps the data fresh in
+ * browsers that remain continuously busy.
+ */
+const runWhenIdle = async <T>(task: () => T): Promise<T> => {
+  if (typeof window === 'undefined') {
+    return task();
+  }
+
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  };
+
+  if (typeof idleWindow.requestIdleCallback === 'function') {
+    return new Promise<T>((resolve) => {
+      idleWindow.requestIdleCallback(() => resolve(task()), { timeout: 1_000 });
+    });
+  }
+
+  return new Promise<T>((resolve) => {
+    window.setTimeout(() => resolve(task()), 0);
+  });
+};
+
 export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
   usage: null,
   keyStats: createEmptyKeyStats(),
@@ -111,17 +137,29 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
 
         if (requestId !== usageRequestToken) return;
 
-        const usageDetails = collectUsageDetails(usage);
-        set({
-          usage,
-          keyStats: computeKeyStatsFromDetails(usageDetails),
-          usageDetails,
-          loading: false,
-          error: null,
-          lastRefreshedAt: Date.now(),
-          revision: usageResponse?.revision ?? null,
-          scopeKey
-        });
+        const applyUsageResponse = () => {
+          // A logout, scope switch, or newer request may have invalidated the
+          // snapshot while it was waiting for an idle slice.
+          if (requestId !== usageRequestToken) return;
+
+          const usageDetails = collectUsageDetails(usage);
+          set({
+            usage,
+            keyStats: computeKeyStatsFromDetails(usageDetails),
+            usageDetails,
+            loading: false,
+            error: null,
+            lastRefreshedAt: Date.now(),
+            revision: usageResponse?.revision ?? null,
+            scopeKey
+          });
+        };
+
+        if (silent) {
+          await runWhenIdle(applyUsageResponse);
+        } else {
+          applyUsageResponse();
+        }
       } catch (error: unknown) {
         if (requestId !== usageRequestToken) return;
         const message = getErrorMessage(error);
