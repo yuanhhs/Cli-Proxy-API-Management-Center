@@ -2,6 +2,8 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -35,7 +37,7 @@ jobs:
       - name: Build all-in-one HTML
         run: bun run build
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
 
       - name: Prepare release assets
         run: |
@@ -46,22 +48,36 @@ jobs:
       - name: Generate release notes
         run: |
           set -euo pipefail
-          current_tag="${GITHUB_REF_NAME}"
-          previous_tag="$(git tag --list 'v*' --sort=-v:refname | grep -v "^${current_tag}$" | head -n 1 || true)"
-          if [ -n "${previous_tag}" ]; then
-            range="${previous_tag}..${current_tag}"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            current_tag="${GITHUB_REF_NAME}"
+            previous_tag="$(git tag --list 'v*' --sort=-v:refname | grep -v "^${current_tag}$" | head -n 1 || true)"
+            if [ -n "${previous_tag}" ]; then
+              range="${previous_tag}..${current_tag}"
+            else
+              range="${GITHUB_SHA}"
+            fi
+            git log --pretty=format:"- %h %s" "${range}" > release-notes.md
           else
-            range="${current_tag}"
+            git log -1 --pretty=format:"- %h %s" "${GITHUB_SHA}" > release-notes.md
           fi
 
-          : > release-notes.md
-          git log --pretty=format:"- %h %s" "${range}" >> release-notes.md
+      - name: Resolve release tag
+        id: release
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "tag=build-${GITHUB_RUN_NUMBER}" >> "${GITHUB_OUTPUT}"
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: dist/management.html
           body_path: release-notes.md
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.release.outputs.tag }}
           draft: false
           prerelease: false
         env:
