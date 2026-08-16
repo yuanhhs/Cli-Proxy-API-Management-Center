@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { usageApi } from '@/services/api';
-import type { UsageRevision } from '@/services/api/usage';
+import type { UsageQueryRange, UsageRevision } from '@/services/api/usage';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { collectUsageDetails, computeKeyStatsFromDetails, type KeyStats, type UsageDetail } from '@/utils/usage';
 import i18n from '@/i18n';
@@ -11,6 +11,7 @@ export type LoadUsageStatsOptions = {
   force?: boolean;
   staleTimeMs?: number;
   silent?: boolean;
+  range?: UsageQueryRange;
 };
 
 type UsageStatsSnapshot = Record<string, unknown>;
@@ -25,7 +26,7 @@ type UsageStatsState = {
   revision: UsageRevision | null;
   scopeKey: string;
   loadUsageStats: (options?: LoadUsageStatsOptions) => Promise<void>;
-  checkUsageStats: () => Promise<void>;
+  checkUsageStats: (range?: UsageQueryRange) => Promise<void>;
   clearUsageStats: () => void;
 };
 
@@ -86,8 +87,9 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
   loadUsageStats: async (options = {}) => {
     const force = options.force === true;
     const staleTimeMs = options.staleTimeMs ?? USAGE_STATS_STALE_TIME_MS;
+    const range = options.range ?? 'all';
     const { apiBase = '', managementKey = '' } = useAuthStore.getState();
-    const scopeKey = `${apiBase}::${managementKey}`;
+    const scopeKey = `${apiBase}::${managementKey}::${range}`;
     const state = get();
     const scopeChanged = state.scopeKey !== scopeKey;
     const silent = options.silent === true && state.usage !== null && !scopeChanged;
@@ -130,7 +132,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
 
     const requestPromise = (async () => {
       try {
-        const usageResponse = await usageApi.getUsage();
+        const usageResponse = await usageApi.getUsage(range);
         const rawUsage = usageResponse?.usage ?? usageResponse;
         const usage =
           rawUsage && typeof rawUsage === 'object' ? (rawUsage as UsageStatsSnapshot) : null;
@@ -180,13 +182,13 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
     await requestPromise;
   },
 
-  checkUsageStats: async () => {
+  checkUsageStats: async (range = 'all') => {
     const { apiBase = '', managementKey = '' } = useAuthStore.getState();
-    const scopeKey = `${apiBase}::${managementKey}`;
+    const scopeKey = `${apiBase}::${managementKey}::${range}`;
     const state = get();
 
     if (state.scopeKey !== scopeKey || state.usage === null) {
-      await state.loadUsageStats({ force: true, staleTimeMs: 0 });
+      await state.loadUsageStats({ force: true, staleTimeMs: 0, range });
       return;
     }
 
@@ -196,7 +198,7 @@ export const useUsageStatsStore = create<UsageStatsState>((set, get) => ({
       return;
     }
     if (!revisionsMatch(current.revision, revision)) {
-      await current.loadUsageStats({ force: true, staleTimeMs: 0, silent: true });
+      await current.loadUsageStats({ force: true, staleTimeMs: 0, silent: true, range });
     }
   },
 

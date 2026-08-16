@@ -7,6 +7,8 @@ import { computeKeyStats, KeyStats } from '@/utils/usage';
 
 const USAGE_TIMEOUT_MS = 60 * 1000;
 
+export type UsageQueryRange = '24h' | '7d' | '30d' | 'all';
+
 export interface UsageRevision {
   latest_id: number;
   total_rows: number;
@@ -38,7 +40,11 @@ export const usageApi = {
   /**
    * 获取使用统计原始数据
    */
-  getUsage: () => apiClient.get<UsageResponse>('/usage', { timeout: USAGE_TIMEOUT_MS }),
+  getUsage: (range: UsageQueryRange = 'all') =>
+    apiClient.get<UsageResponse>('/usage', {
+      timeout: USAGE_TIMEOUT_MS,
+      params: range === 'all' ? undefined : { range },
+    }),
 
   /**
    * 获取轻量版本标记，仅在数据变化后重新拉取完整统计

@@ -83,6 +83,7 @@ export function UsagePage() {
   const { t } = useTranslation();
   const config = useConfigStore((state) => state.config);
   const openaiCompatibilityConfig = config?.openaiCompatibility;
+  const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
   const [openaiProvidersWithAuthIndex, setOpenaiProvidersWithAuthIndex] = useState<{
     source: OpenAIProviderConfig[] | undefined;
     providers: OpenAIProviderConfig[];
@@ -105,7 +106,7 @@ export function UsagePage() {
     importInputRef,
     exporting,
     importing,
-  } = useUsageData();
+  } = useUsageData(timeRange);
 
   // Keep polling responsive: expensive usage-card calculations follow the
   // latest snapshot at a lower priority and can be interrupted by input.
@@ -113,8 +114,6 @@ export function UsagePage() {
   const deferredNowMs = useDeferredValue(lastRefreshedAt?.getTime() ?? 0);
 
   useHeaderRefresh(loadUsage);
-
-  const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
 
   useEffect(() => {
     let cancelled = false;

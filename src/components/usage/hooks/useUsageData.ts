@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { USAGE_STATS_STALE_TIME_MS, useNotificationStore, useUsageStatsStore } from '@/stores';
 import { usageApi } from '@/services/api/usage';
 import { downloadBlob } from '@/utils/download';
-import { loadModelPrices, saveModelPrices, type ModelPrice } from '@/utils/usage';
+import {
+  loadModelPrices,
+  saveModelPrices,
+  type ModelPrice,
+  type UsageTimeRange,
+} from '@/utils/usage';
 
 const LIVE_USAGE_CHECK_INTERVAL_MS = 30_000;
 
@@ -32,7 +37,7 @@ export interface UseUsageDataReturn {
   importing: boolean;
 }
 
-export function useUsageData(): UseUsageDataReturn {
+export function useUsageData(range: UsageTimeRange = 'all'): UseUsageDataReturn {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const usageSnapshot = useUsageStatsStore((state) => state.usage);
@@ -48,8 +53,8 @@ export function useUsageData(): UseUsageDataReturn {
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadUsage = useCallback(async () => {
-    await loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS });
-  }, [loadUsageStats]);
+    await loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS, range });
+  }, [loadUsageStats, range]);
 
   useEffect(() => {
     setModelPrices(loadModelPrices());
@@ -60,7 +65,7 @@ export function useUsageData(): UseUsageDataReturn {
         return;
       }
       checkInFlight = true;
-      void checkUsageStats()
+      void checkUsageStats(range)
         .catch(() => {})
         .finally(() => {
           checkInFlight = false;
@@ -82,7 +87,7 @@ export function useUsageData(): UseUsageDataReturn {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', checkForUpdates);
     };
-  }, [checkUsageStats]);
+  }, [checkUsageStats, range]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -141,7 +146,11 @@ export function useUsageData(): UseUsageDataReturn {
         'success'
       );
       try {
-        await loadUsageStats({ force: true, staleTimeMs: USAGE_STATS_STALE_TIME_MS });
+        await loadUsageStats({
+          force: true,
+          staleTimeMs: USAGE_STATS_STALE_TIME_MS,
+          range,
+        });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : '';
         showNotification(
