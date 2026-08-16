@@ -11,10 +11,6 @@ import type { ChartOptions } from 'chart.js';
 export const sparklineOptions: ChartOptions<'line'> = {
   responsive: true,
   maintainAspectRatio: false,
-  // These charts refresh with the live usage snapshot. Animating every
-  // dataset on each poll causes several canvases to compete for the main
-  // thread and makes scrolling/input stutter.
-  animation: false,
   plugins: { legend: { display: false }, tooltip: { enabled: false } },
   scales: { x: { display: false }, y: { display: false } },
   elements: { line: { tension: 0.45 }, point: { radius: 0 } }
@@ -50,7 +46,6 @@ export function buildChartOptions({
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: false,
     interaction: {
       mode: 'index',
       intersect: false

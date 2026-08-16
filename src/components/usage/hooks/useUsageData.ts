@@ -10,8 +10,6 @@ import {
   type UsageTimeRange,
 } from '@/utils/usage';
 
-const LIVE_USAGE_CHECK_INTERVAL_MS = 30_000;
-
 export interface UsagePayload {
   total_requests?: number;
   success_count?: number;
@@ -45,7 +43,6 @@ export function useUsageData(range: UsageTimeRange = 'all'): UseUsageDataReturn 
   const storeError = useUsageStatsStore((state) => state.error);
   const lastRefreshedAtTs = useUsageStatsStore((state) => state.lastRefreshedAt);
   const loadUsageStats = useUsageStatsStore((state) => state.loadUsageStats);
-  const checkUsageStats = useUsageStatsStore((state) => state.checkUsageStats);
 
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPrice>>({});
   const [exporting, setExporting] = useState(false);
@@ -58,36 +55,11 @@ export function useUsageData(range: UsageTimeRange = 'all'): UseUsageDataReturn 
 
   useEffect(() => {
     setModelPrices(loadModelPrices());
+  }, []);
 
-    let checkInFlight = false;
-    const checkForUpdates = () => {
-      if (document.visibilityState !== 'visible' || checkInFlight) {
-        return;
-      }
-      checkInFlight = true;
-      void checkUsageStats(range)
-        .catch(() => {})
-        .finally(() => {
-          checkInFlight = false;
-        });
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkForUpdates();
-      }
-    };
-
-    checkForUpdates();
-    const intervalId = window.setInterval(checkForUpdates, LIVE_USAGE_CHECK_INTERVAL_MS);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', checkForUpdates);
-
-    return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', checkForUpdates);
-    };
-  }, [checkUsageStats, range]);
+  useEffect(() => {
+    void loadUsageStats({ staleTimeMs: USAGE_STATS_STALE_TIME_MS, range }).catch(() => {});
+  }, [loadUsageStats, range]);
 
   const handleExport = async () => {
     setExporting(true);
