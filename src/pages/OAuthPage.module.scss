@@ -1,0 +1,155 @@
+@use '../styles/mixins' as *;
+
+.container {
+  width: 100%;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.cardTitleIcon {
+  width: 24px;
+  height: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 $spacing-xl 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+
+  :global(.form-group) {
+    margin-bottom: 0;
+  }
+
+  :global(.status-badge) {
+    margin-bottom: 0;
+    align-self: flex-start;
+  }
+}
+
+.cardHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.oauthSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.oauthGrid {
+  display: grid;
+  gap: $spacing-lg;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.oauthCard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.oauthStatus {
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  font-size: 14px;
+
+  &.success {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+  }
+
+  &.error {
+    background-color: rgba($error-color, 0.12);
+    color: $error-color;
+  }
+
+  &.waiting {
+    background-color: rgba($primary-color, 0.12);
+    color: var(--primary-color);
+  }
+}
+
+.callbackSection {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.callbackActions {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.authUrlBox {
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.authUrlLabel {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.authUrlValue {
+  font-weight: 700;
+  color: var(--text-primary);
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  max-width: 100%;
+}
+
+.authUrlActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.successActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.openCodeFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
